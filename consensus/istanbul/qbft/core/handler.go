@@ -229,6 +229,7 @@ func (c *core) handleTimeoutMsg() {
 	round := c.current.Round()
 	nextRound := new(big.Int).Add(round, common.Big1)
 
+	logger.Info("Proj-TJ: In round change time out, Algorithm 3 Line 1.")
 	logger.Warn("QBFT: TIMER CHANGING ROUND", "pr", c.current.preparedRound)
 	c.startNewRound(nextRound)
 	logger.Warn("QBFT: TIMER CHANGED ROUND", "pr", c.current.preparedRound)

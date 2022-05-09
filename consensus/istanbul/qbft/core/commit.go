@@ -106,6 +106,7 @@ func (c *core) handleCommitMsg(commit *qbfttypes.Commit) error {
 
 	// If we reached thresho
 	if c.current.QBFTCommits.Size() >= c.QuorumSize() {
+		logger.Info("Proj-TJ: In normal operation commit, Algorithm 2 Line 8.")
 		logger.Info("QBFT: received quorum of COMMIT messages")
 		c.commitQBFT()
 	} else {

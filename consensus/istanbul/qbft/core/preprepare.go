@@ -155,6 +155,7 @@ func (c *core) handlePreprepareMsg(preprepare *qbfttypes.Preprepare) error {
 		c.current.SetPreprepare(preprepare)
 		c.setState(StatePreprepared)
 
+		c.logger.Info("Proj-TJ: In normal operation preprepare, Algorithm 2 Line 3.")
 		// Broadcast prepare message to other validators
 		c.broadcastPrepare()
 	}

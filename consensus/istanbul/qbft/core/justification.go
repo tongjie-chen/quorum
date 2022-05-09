@@ -70,6 +70,7 @@ func hasQuorumOfRoundChangeMessagesForNil(roundChangeMessages []*qbfttypes.Signe
 // Checks whether a set of ROUND-CHANGE messages has some message with `preparedRound` and `preparedBlockDigest`,
 // and has `quorumSize` messages with prepared round equal to nil or equal or lower than `preparedRound`.
 func hasQuorumOfRoundChangeMessagesForPreparedRoundAndBlock(roundChangeMessages []*qbfttypes.SignedRoundChangePayload, preparedRound *big.Int, preparedBlock istanbul.Proposal, quorumSize int) error {
+	// Proj-TJ: In justify pre prepare, Algorithm 4 Line 3.
 	lowerOrEqualRoundCount := 0
 	hasMatchingMessage := false
 	for _, m := range roundChangeMessages {
@@ -92,7 +93,7 @@ func hasQuorumOfRoundChangeMessagesForPreparedRoundAndBlock(roundChangeMessages 
 // preparedRound and preparedBlockDigest of a ROUND-CHANGE qbfttypes.
 func hasMatchingRoundChangeAndPrepares(
 	roundChange *qbfttypes.RoundChange, prepareMessages []*qbfttypes.Prepare, quorumSize int) error {
-
+	// Proj-TJ: In justify round change, Algorithm 4 Line 1.
 	if len(prepareMessages) < quorumSize {
 		return errors.New("number of prepare messages is less than quorum of messages")
 	}

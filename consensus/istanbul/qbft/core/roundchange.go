@@ -135,12 +135,13 @@ func (c *core) handleRoundChange(roundChange *qbfttypes.RoundChange) error {
 		// We received F+1 ROUND-CHANGE messages (this may happen before our timeout exprired)
 		// we start new round and broadcast ROUND-CHANGE message
 		newRound := c.roundChangeSet.getMinRoundChange(currentRound)
-
+		logger.Info("Proj-TJ: In round change receiving F+1 round-change messages, Algorithm 3 Line 5.")
 		logger.Info("QBFT: received F+1 ROUND-CHANGE messages", "F", c.valSet.F())
 
 		c.startNewRound(newRound)
 		c.broadcastRoundChange(newRound)
 	} else if currentRoundMessages >= c.QuorumSize() && c.IsProposer() && c.current.preprepareSent.Cmp(currentRound) < 0 {
+		logger.Info("Proj-TJ: In round change receiving quorum messages, Algorithm 3 Line 11.")
 		logger.Info("QBFT: received quorum of ROUND-CHANGE messages")
 
 		// We received quorum of ROUND-CHANGE for current round and we are proposer
@@ -181,6 +182,7 @@ func (c *core) handleRoundChange(roundChange *qbfttypes.RoundChange) error {
 
 // highestPrepared returns the highest Prepared Round and the corresponding Prepared Block
 func (c *core) highestPrepared(round *big.Int) (*big.Int, istanbul.Proposal) {
+	// Proj-TJ: In getting highest prepared, Algorithm 4 Line 5.
 	return c.roundChangeSet.highestPreparedRound[round.Uint64()], c.roundChangeSet.highestPreparedBlock[round.Uint64()]
 }
 

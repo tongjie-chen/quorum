@@ -45,6 +45,7 @@ func (c *core) handleRequest(request *Request) error {
 		// Start ROUND-CHANGE timer
 		c.newRoundChangeTimer()
 
+		logger.Info("Proj-TJ: In initial setup, Algorithm 1 Line 18.")
 		// Send PRE-PREPARE message to other validators
 		c.sendPreprepareMsg(request)
 	}

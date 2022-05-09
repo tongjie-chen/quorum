@@ -110,6 +110,7 @@ func (c *core) handlePrepare(prepare *qbfttypes.Prepare) error {
 		}
 
 		c.setState(StatePrepared)
+		logger.Info("Proj-TJ: In normal operation prepare, Algorithm 2 Line 7.")
 		c.broadcastCommit()
 	} else {
 		logger.Debug("QBFT: accepted PREPARE messages")

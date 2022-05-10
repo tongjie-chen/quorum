@@ -128,26 +128,25 @@ It\'s in a bigger category of algorithm-state machine replication
 ([State machine replication -
 Wikipedia](https://en.wikipedia.org/wiki/State_machine_replication)),
 where each machine depends on input and have finite steps to end
-execution. To ensure the correctness, if `f` of the maximum
-tolerance for the number of failed or malicious nodes, then
-`f+1` correct results are needed. In case of malicious
-attacks of size `f`, the number of total nodes `n`
-to ensure correct operation of the network is at least
+execution. To ensure the correctness, if `f` of the maximum tolerance
+for the number of failed or malicious nodes, then `f+1` correct results
+are needed. In case of malicious attacks of size `f`, the number of
+total nodes `n` to ensure correct operation of the network is at least
 `3f+1`.
 
 Previous algorithms have been proposed. The advantage of QBFT is to have
 a low communication latency of three with normal case and view change
-communication complexity of `O(n^2)` . This is most relevant
-in situation where the execution and communication delay is not easy to
+communication complexity of `O(n^2)` . This is most relevant in
+situation where the execution and communication delay is not easy to
 predict.
 
-A quorum is the the number of `floor((n+f)/2)+1`.
+A quorum is the number of `floor((n+f)/2)+1`.
 
 Normal operation is like a state machine. Without failure of scale
-larger than `f+1`, the state of node changes from setup to
-pre-prepare to prepare and then commit and to final state. It starts
-with a leader to propose value to broadcast to other nodes to start
-other nodes in state machine manner.
+larger than `f+1`, the state of node changes from setup to pre-prepare
+to prepare and then commit and to final state. It starts with a leader
+to propose value to broadcast to other nodes to start other nodes in
+state machine manner.
 
 Because the communication delay may be infinite if a node is down or
 erroneous outputs from nodes, the algorithms uses round change to keep

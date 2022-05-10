@@ -1,104 +1,170 @@
-# <img src="https://raw.githubusercontent.com/consensys/quorum/master/logo.png" width="200" height="35"/>
+# Trace the algorithms by log
 
+Added log statements at critical part of the algorithms with prefix
+\"Proj-TJ\" so it is distinguishable.
 
-![Build Check](https://github.com/jpmorganchase/quorum/workflows/Build%20Check/badge.svg?branch=master)
-[![Docker Pulls](https://img.shields.io/docker/pulls/quorumengineering/quorum)](https://hub.docker.com/r/quorumengineering/quorum)
-[![Discord](https://img.shields.io/discord/697535391594446898)](https://discord.com/channels/697535391594446898/747810572937986240)
+To filter this part of log only, run `geth` with `2>&1 | grep "Proj-TJ"`
+added to the end of command.
 
+# Client program setup
 
-GoQuorum is an Ethereum-based distributed ledger protocol with transaction/contract privacy and new consensus mechanisms.
+The client program is in repo [GitHub -
+tongjie-chen/quorum-client](https://github.com/tongjie-chen/quorum-client).
+It\'s written HTML. Needs to manually set up nodes and then run. The
+node set up process is in [Use QBFT -
+GoQuorum](https://consensys.net/docs/goquorum/en/latest/tutorials/private-network/create-qbft-network/).
 
-GoQuorum is a fork of [go-ethereum](https://github.com/ethereum/go-ethereum) and is updated in line with go-ethereum releases.
+## Set up nodes
 
-Key enhancements over go-ethereum:
+In the working directory,
 
-* [__Privacy__](https://consensys.net/docs/goquorum//en/latest/concepts/privacy/privacy/) - GoQuorum supports private transactions and private contracts through public/private state separation, and utilises peer-to-peer encrypted message exchanges (see [Tessera](https://github.com/consensys/tessera)) for directed transfer of private data to network participants
-* [__Alternative Consensus Mechanisms__](https://consensys.net/docs/goquorum//en/latest/concepts/consensus/overview/) - with no need for POW/POS in a permissioned network, GoQuorum instead offers multiple consensus mechanisms that are more appropriate for consortium chains:
-    * [__QBFT__](https://consensys.net/docs/goquorum/en/latest/configure-and-manage/configure/consensus-protocols/qbft/) - Improved version of IBFT that is interoperable with Hyperledger Besu
-    * [__Istanbul BFT__](https://consensys.net/docs/goquorum/en/latest/configure-and-manage/configure/consensus-protocols/ibft/) - a PBFT-inspired consensus algorithm with transaction finality, by AMIS.
-    * [__Clique POA Consensus__](https://github.com/ethereum/EIPs/issues/225) - a default POA consensus algorithm bundled with Go Ethereum.
-    * [__Raft-based Consensus__](https://consensys.net/docs/goquorum/en/latest/configure-and-manage/configure/consensus-protocols/raft/) - a consensus model for faster blocktimes, transaction finality, and on-demand block creation
-* [__Peer Permissioning__](https://consensys.net/docs/goquorum/en/latest/concepts/permissions-overview/) - node/peer permissioning, ensuring only known parties can join the network
-* [__Account Management__](https://consensys.net/docs/goquorum/en/latest/concepts/account-management/) - GoQuorum introduced account plugins, which allows GoQuorum or clef to be extended with alternative methods of managing accounts including external vaults.
-* [__Pluggable Architecture__](https://consensys.net/docs/goquorum/en/latest/concepts/plugins/) -  allows adding additional features as plugins to the core `geth`, providing extensibility, flexibility, and distinct isolation of GoQuorum features.
-* __Higher Performance__ - GoQuorum offers significantly higher performance throughput than public geth
+``` {.bash org-language="sh"}
+mkdir -p ./QBFT-Network/{Node-0,Node-1}/data/keystore
+tree
+cd QBFT-Network
+npx quorum-genesis-tool --consensus qbft --chainID 1337 --blockperiod 5 --requestTimeout 10 --epochLength 30000 --difficulty 1 --gasLimit '0xFFFFFF' --coinbase '0x0000000000000000000000000000000000000000' --validators 2 --members 0 --bootnodes 0 --outputPath 'artifacts'
+time=`ls artifacts`
+mv artifacts/$time/* artifacts
+cd artifacts/goQuorum
+sed -i 's/<HOST>/127.0.0.1/g' static-nodes.json
+```
 
-## Architecture
+Now manually change the ports in the `static-nodes.json` and then run
+the following script.
 
-![GoQuorum Tessera Privacy Flow](https://github.com/consensys/quorum/blob/master/docs/Quorum%20Design.png)
+``` {.bash org-language="sh"}
+for i in `seq 0 1`; do cp static-nodes.json genesis.json ../../Node-$i/data/; done
+cd ..
+for i in `seq 0 1`; do cd ./validator$i; cp nodekey* address ../../Node-$i/data; cp account* ../../Node-$i/data/keystore; cd ..; done
+cd ..
+for i in `seq 0 1`; do cd Node-$i; geth --datadir data init data/genesis.json; cd ..; done  
+```
 
-The above diagram is very high-level overview of component architecture used by GoQuorum. For more in-depth discussion of the components and how they interact, please refer to [lifecycle of a private transaction](https://consensys.net/docs/goquorum/en/latest/concepts/privacy/private-transaction-lifecycle/).
+After that, can run the nodes like the following,
 
-## Quickstart
-The easiest way to get started is to use * [quorum-dev-quickstart](https://consensys.net/docs/goquorum/en/latest/tutorials/quorum-dev-quickstart/getting-started/) - a command line tool that allows users to set up a development GoQuorum network on their local machine in less than *2 minutes*.
+``` {.bash org-language="sh"}
+cd Node-0
+export ADDRESS=$(grep -o '"address": *"[^"]*"' ./data/keystore/accountKeystore | grep -o '"[^"]*"$' | sed 's/"//g')
+export PRIVATE_CONFIG=ignore
+geth --datadir data \
+    --graphql --graphql.vhosts=* \
+    --networkid 1337 --nodiscover --verbosity 5 \
+    --syncmode full --nousb \
+    --istanbul.blockperiod 5 --mine --miner.threads 1 --miner.gasprice 0 --emitcheckpoints \
+    --http --http.addr 127.0.0.1 --http.port 22011 --http.corsdomain "*" --http.vhosts "*" \
+    --ws --ws.addr 127.0.0.1 --ws.port 32011 --ws.origins "*" \
+    --http.api admin,trace,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,istanbul,qbft \
+    --ws.api admin,trace,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,istanbul,qbft \
+    --unlock ${ADDRESS} --allow-insecure-unlock --password ./data/keystore/accountPassword \
+    --port 30311
+```
 
-## GoQuorum Projects
+``` {.bash org-language="sh"}
+cd Node-1
+export ADDRESS=$(grep -o '"address": *"[^"]*"' ./data/keystore/accountKeystore | grep -o '"[^"]*"$' | sed 's/"//g')
+export PRIVATE_CONFIG=ignore
+geth --datadir data \
+    --networkid 1337 --nodiscover --verbosity 5 \
+    --syncmode full --nousb \
+    --istanbul.blockperiod 5 --mine --miner.threads 1 --miner.gasprice 0 --emitcheckpoints \
+    --http --http.addr 127.0.0.1 --http.port 22012 --http.corsdomain "*" --http.vhosts "*" \
+    --ws --ws.addr 127.0.0.1 --ws.port 32012 --ws.origins "*" \
+    --http.api admin,trace,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,istanbul,qbft \
+    --ws.api admin,trace,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,istanbul,qbft \
+    --unlock ${ADDRESS} --allow-insecure-unlock --password ./data/keystore/accountPassword \
+    --port 30312
+```
 
-Check out some of the interesting projects we are actively working on:
+Take notes of the http port number and account in
+`Node-0/data/keystore/accountAddress` or the one in Node-1.
 
-* [quorum-remix-plugin](https://consensys.net/docs/goquorum/en/latest/tutorials/quorum-dev-quickstart/remix/): The GoQuorum plugin for Ethereum's Remix IDE adds support for creating and interacting with private contracts on a GoQuorum network.
-* [Cakeshop](https://consensys.net/docs/goquorum/en/latest/configure-and-manage/monitor/cakeshop/): An integrated development environment and SDK for GoQuorum
-* [quorum-examples](https://github.com/ConsenSys/quorum-examples): GoQuorum demonstration examples
-* <img src="docs/images/qubernetes/k8s-logo.png" width="15"/> [Quorum-Kubernetes](https://consensys.net/docs/goquorum/en/latest/deploy/install/kubernetes/): Deploy GoQuorum on Kubernetes
-* [we3js-quorum](https://consensys.net/docs/goquorum/en/latest/reference/web3js-quorum/): Extends web3.js to support GoQuorum and Hyperledger Besu specific APIs
-* Zero Knowledge on GoQuorum
-   * [ZSL on GoQuorum](https://github.com/ConsenSys/zsl-q/)
-   * [Anonymous Zether](https://github.com/ConsenSys/anonymous-zether)
+## Deploy contract
 
+Deploy the contract ([kaleido-js/simplestorage.sol at master ·
+kaleido-io/kaleido-js ·
+GitHub](https://github.com/kaleido-io/kaleido-js/blob/master/deploy-transact/contracts/simplestorage.sol))
+first by following the guide in [Deploy a contract -
+GoQuorum](https://consensys.net/docs/goquorum/en/latest/tutorials/contracts/deploying-contracts/)
+with solidity compiler.
 
+``` {.bash org-language="sh"}
+wget https://raw.githubusercontent.com/kaleido-io/kaleido-js/master/deploy-transact/contracts/simplestorage.sol -O /tmp/simplestorage.sol
+```
 
-## Official Docker Containers
-The official docker containers can be found under https://hub.docker.com/u/quorumengineering/
+Change compiler version from `^` to \"\>=\", assuming no breaking
+changes.
 
-## Third Party Tools/Libraries
+``` {.bash org-language="sh"}
+sed -i 's/\^/>=/g' /tmp/simplestorage.sol
+solc -o /tmp --abi --bin /tmp/simplestorage.sol
+```
 
-The following GoQuorum-related libraries/applications have been created by Third Parties and as such are not specifically endorsed by J.P. Morgan.  A big thanks to the developers for improving the tooling around GoQuorum!
+Or just directly change the \"from\" account address and the http port
+in the end of next command to deploy and get the contract address.
 
-* [Quorum Blockchain Explorer](https://github.com/web3labs/epirus-free) - a Blockchain Explorer for GoQuorum which supports viewing private transactions
-* [Quorum-Genesis](https://github.com/davebryson/quorum-genesis) - A simple CL utility for GoQuorum to help populate the genesis file with voters and makers
-* [Quorum Maker](https://github.com/synechron-finlabs/quorum-maker/) - a utility to create GoQuorum nodes
-* [ERC20 REST service](https://github.com/web3labs/erc20-rest-service) - a GoQuorum-supported RESTful service for creating and managing ERC-20 tokens
-* [Nethereum Quorum](https://github.com/Nethereum/Nethereum/tree/master/src/Nethereum.Quorum) - a .NET GoQuorum adapter
-* [web3j-quorum](https://github.com/web3j/web3j-quorum) - an extension to the web3j Java library providing support for the GoQuorum API
-* [Apache Camel](http://github.com/apache/camel) - an Apache Camel component providing support for the GoQuorum API using web3j library. Here is the artcile describing how to use Apache Camel with Ethereum and GoQuorum https://medium.com/@bibryam/enterprise-integration-for-ethereum-fa67a1577d43
+``` {.bash org-language="sh"}
+curl -X POST --data '{"jsonrpc":"2.0","method":"eth_sendTransaction","params":[{"from":"0xf0e2db6c8dc6c681bb5d6ad121a107f300e9b2b5", "to":null, "gas":"0x24A22","gasPrice":"0x0", "data":"0x608060405234801561001057600080fd5b5060405161014d38038061014d8339818101604052602081101561003357600080fd5b8101908080519060200190929190505050806000819055505060f38061005a6000396000f3fe6080604052348015600f57600080fd5b5060043610603c5760003560e01c80632a1afcd914604157806360fe47b114605d5780636d4ce63c146088575b600080fd5b604760a4565b6040518082815260200191505060405180910390f35b608660048036036020811015607157600080fd5b810190808035906020019092919050505060aa565b005b608e60b4565b6040518082815260200191505060405180910390f35b60005481565b8060008190555050565b6000805490509056fea2646970667358221220e6966e446bd0af8e6af40eb0d8f323dd02f771ba1f11ae05c65d1624ffb3c58264736f6c63430007060033"}], "id":1}' -H 'Content-Type: application/json' http://localhost:20000
+```
 
-## Contributing
-GoQuorum is built on open source and we invite you to contribute enhancements. Upon review you will be required to complete a Contributor License Agreement (CLA) before we are able to merge. If you have any questions about the contribution process, please feel free to send an email to [info@goquorum.com](mailto:info@goquorum.com). Please see the [Contributors guide](.github/CONTRIBUTING.md) for more information about the process.
+Take note of contract address.
 
-## Reporting Security Bugs
-Security is part of our commitment to our users. At GoQuorum we have a close relationship with the security community, we understand the realm, and encourage security researchers to become part of our mission of building secure reliable software. This section explains how to submit security bugs, and what to expect in return.
+## Run the client
 
-All security bugs in [GoQuorum](https://github.com/consensys/quorum) and its ecosystem ([Tessera](https://github.com/consensys/tessera), [Cakeshop](https://github.com/consensys/cakeshop), ..etc)  should be reported by email to [security-quorum@consensys.net](mailto:security-quorum@consensys.net). Please use the prefix **[security]** in your subject. This email is delivered to GoQuorum security team. Your email will be acknowledged, and you'll receive a more detailed response to your email as soon as possible indicating the next steps in handling your report. After the initial reply to your report, the security team will endeavor to keep you informed of the progress being made towards a fix and full announcement.
+After getting those information. You can run the client program with
+needed information.
 
-If you have not received a reply to your email or you have not heard from the security team please contact any team member through GoQuorum slack security channel. **Please note that GoQuorum discord channels are public discussion forum**. When escalating to this medium, please do not disclose the details of the issue. Simply state that you're trying to reach a member of the security team.
+With the `set` in contract, if two out of two nodes are working fine,
+you will see the transaction stored in a block number returned.
 
-#### Responsible Disclosure Process
-GoQuorum project uses the following responsible disclosure process:
+If one of the two nodes is down, it will return \"Time out\" and the
+indicator of current block number will not increase.
 
-- Once the security report is received it is assigned a primary handler. This person coordinates the fix and release process.
-- The issue is confirmed and a list of affected software is determined.
-- Code is audited to find any potential similar problems.
-- If it is determined, in consultation with the submitter, that a CVE-ID is required, the primary handler will trigger the process.
-- Fixes are applied to the public repository and a new release is issued.
-- On the date that the fixes are applied, announcements are sent to Quorum-announce.
-- At this point you would be able to disclose publicly your finding.
+# Understanding of QBFT algorithm
 
-**Note:** This process can take some time. Every effort will be made to handle the security bug in as timely a manner as possible, however it's important that we follow the process described above to ensure that disclosures are handled consistently.
+Quorum Byzantine fault tolerance (QBFT) algorithm is an consensus
+algorithm to ensure the safe operation of distributed system.
 
-#### Receiving Security Updates
-The best way to receive security announcements is to subscribe to the Quorum-announce mailing list/channel. Any messages pertaining to a security issue will be prefixed with **[security]**.
+It\'s in a bigger category of algorithm-state machine replication
+([State machine replication -
+Wikipedia](https://en.wikipedia.org/wiki/State_machine_replication)),
+where each machine depends on input and have finite steps to end
+execution. To ensure the correctness, if $f$ of the maximum tolerance
+for the number of failed or malicious nodes, then $f+1$ correct results
+are needed. In case of malicious attacks of size $f$, the number of
+total nodes $n$ to ensure correct operation of the network is at least
+$3f+1$.
 
-Comments on This Policy
-If you have any suggestions to improve this policy, please send an email to info@goquorum.com for discussion.
+Previous algorithms have been proposed. The advantage of QBFT is to have
+a low communication latency of three with normal case and view change
+communication complexity of $O(n^2)$ . This is most relevant in
+situation where the execution and communication delay is not easy to
+predict.
 
-## License
+A quorum is the the number of $floor((n+f)/2)+1$.
 
-The go-ethereum library (i.e. all code outside of the `cmd` directory) is licensed under the
-[GNU Lesser General Public License v3.0](https://www.gnu.org/licenses/lgpl-3.0.en.html), also
-included in our repository in the `COPYING.LESSER` file.
+Normal operation is like a state machine. Without failure of scale
+larger than $f+1$, the state of node changes from setup to pre-prepare
+to prepare and then commit and to final state. It starts with a leader
+to propose value to broadcast to other nodes to start other nodes in
+state machine manner.
 
-The go-ethereum binaries (i.e. all code inside of the `cmd` directory) is licensed under the
-[GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html), also included
-in our repository in the `COPYING` file.
+Because the communication delay may be infinite if a node is down or
+erroneous outputs from nodes, the algorithms uses round change to keep
+liveness. When a time limit is reached for the normal operation as
+counted by a node, it will broadcast to change round. When receiving a
+quorum of valid messages and round change is justified, the node will
+change round and start the normal operation.
 
-Any project planning to use the `crypto/secp256k1` sub-module must use the specific [secp256k1 standalone library](https://github.com/ConsenSys/goquorum-crypto-secp256k1) licensed under 3-clause BSD.
+Because of the number specified by quorum, the validity of algorithms
+can be confirmed and also correctness. Full proof can be seen at
+<https://arxiv.org/pdf/2002.03613v2.pdf>.
+
+# Technical considerations in writing the client
+
+Due to limited familiarity with Kafka, I figured out to use rpc and then
+found the direct rpc calls requires a lot of encoding. So used `web3.js`
+for the client to call with URL.
+
+With `web3.js`, web development framework may be used for this client
+writing. But it requires a server to set up to run. So finally ended up
+with vanilla JavaScript on HTML with slight CSS styling.

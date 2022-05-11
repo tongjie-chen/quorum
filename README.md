@@ -19,6 +19,9 @@ GoQuorum](https://consensys.net/docs/goquorum/en/latest/tutorials/private-networ
 In the working directory,
 
 ``` {.bash org-language="sh"}
+cd ~/tmp/
+mkdir qbft-test3
+cd qbft-test3
 mkdir -p ./QBFT-Network/{Node-0,Node-1}/data/keystore
 tree
 cd QBFT-Network
@@ -33,11 +36,12 @@ Now manually change the ports in the `static-nodes.json` and then run
 the following script.
 
 ``` {.bash org-language="sh"}
+cd ~/tmp/qbft-test3/QBFT-Network/artifacts/goQuorum
 for i in `seq 0 1`; do cp static-nodes.json genesis.json ../../Node-$i/data/; done
 cd ..
 for i in `seq 0 1`; do cd ./validator$i; cp nodekey* address ../../Node-$i/data; cp account* ../../Node-$i/data/keystore; cd ..; done
 cd ..
-for i in `seq 0 1`; do cd Node-$i; geth --datadir data init data/genesis.json; cd ..; done  
+for i in `seq 0 1`; do cd Node-$i; geth --datadir data init data/genesis.json; cd ..; done
 ```
 
 After that, can run the nodes like the following,
@@ -51,12 +55,12 @@ geth --datadir data \
     --networkid 1337 --nodiscover --verbosity 5 \
     --syncmode full --nousb \
     --istanbul.blockperiod 5 --mine --miner.threads 1 --miner.gasprice 0 --emitcheckpoints \
-    --http --http.addr 127.0.0.1 --http.port 22011 --http.corsdomain "*" --http.vhosts "*" \
-    --ws --ws.addr 127.0.0.1 --ws.port 32011 --ws.origins "*" \
+    --http --http.addr 127.0.0.1 --http.port 22021 --http.corsdomain "*" --http.vhosts "*" \
+    --ws --ws.addr 127.0.0.1 --ws.port 32021 --ws.origins "*" \
     --http.api admin,trace,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,istanbul,qbft \
     --ws.api admin,trace,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,istanbul,qbft \
     --unlock ${ADDRESS} --allow-insecure-unlock --password ./data/keystore/accountPassword \
-    --port 30311
+    --port 30321
 ```
 
 ``` {.bash org-language="sh"}
@@ -67,16 +71,20 @@ geth --datadir data \
     --networkid 1337 --nodiscover --verbosity 5 \
     --syncmode full --nousb \
     --istanbul.blockperiod 5 --mine --miner.threads 1 --miner.gasprice 0 --emitcheckpoints \
-    --http --http.addr 127.0.0.1 --http.port 22012 --http.corsdomain "*" --http.vhosts "*" \
-    --ws --ws.addr 127.0.0.1 --ws.port 32012 --ws.origins "*" \
+    --http --http.addr 127.0.0.1 --http.port 22022 --http.corsdomain "*" --http.vhosts "*" \
+    --ws --ws.addr 127.0.0.1 --ws.port 32022 --ws.origins "*" \
     --http.api admin,trace,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,istanbul,qbft \
     --ws.api admin,trace,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,istanbul,qbft \
     --unlock ${ADDRESS} --allow-insecure-unlock --password ./data/keystore/accountPassword \
-    --port 30312
+    --port 30322
 ```
 
 Take notes of the http port number and account in
 `Node-0/data/keystore/accountAddress` or the one in Node-1.
+
+``` {.bash org-language="sh"}
+cat ~/tmp/qbft-test3/QBFT-Network/Node-0/data/keystore/accountAddress
+```
 
 ## Deploy contract
 
@@ -103,7 +111,11 @@ Or just directly change the \"from\" account address and the http port
 in the end of next command to deploy and get the contract address.
 
 ``` {.bash org-language="sh"}
-curl -X POST --data '{"jsonrpc":"2.0","method":"eth_sendTransaction","params":[{"from":"0xf0e2db6c8dc6c681bb5d6ad121a107f300e9b2b5", "to":null, "gas":"0x24A22","gasPrice":"0x0", "data":"0x608060405234801561001057600080fd5b5060405161014d38038061014d8339818101604052602081101561003357600080fd5b8101908080519060200190929190505050806000819055505060f38061005a6000396000f3fe6080604052348015600f57600080fd5b5060043610603c5760003560e01c80632a1afcd914604157806360fe47b114605d5780636d4ce63c146088575b600080fd5b604760a4565b6040518082815260200191505060405180910390f35b608660048036036020811015607157600080fd5b810190808035906020019092919050505060aa565b005b608e60b4565b6040518082815260200191505060405180910390f35b60005481565b8060008190555050565b6000805490509056fea2646970667358221220e6966e446bd0af8e6af40eb0d8f323dd02f771ba1f11ae05c65d1624ffb3c58264736f6c63430007060033"}], "id":1}' -H 'Content-Type: application/json' http://localhost:20000
+curl -X POST --data '{"jsonrpc":"2.0","method":"eth_sendTransaction","params":[{"from":"0x824ea808df43a92c2ab01c6bb6c2ca444b1b64f4", "to":null, "gas":"0x24A22","gasPrice":"0x0", "data":"0x608060405234801561001057600080fd5b5060405161014d38038061014d8339818101604052602081101561003357600080fd5b8101908080519060200190929190505050806000819055505060f38061005a6000396000f3fe6080604052348015600f57600080fd5b5060043610603c5760003560e01c80632a1afcd914604157806360fe47b114605d5780636d4ce63c146088575b600080fd5b604760a4565b6040518082815260200191505060405180910390f35b608660048036036020811015607157600080fd5b810190808035906020019092919050505060aa565b005b608e60b4565b6040518082815260200191505060405180910390f35b60005481565b8060008190555050565b6000805490509056fea2646970667358221220e6966e446bd0af8e6af40eb0d8f323dd02f771ba1f11ae05c65d1624ffb3c58264736f6c63430007060033"}], "id":1}' -H 'Content-Type: application/json' http://localhost:22021
+```
+
+``` {.bash org-language="sh"}
+curl -X POST --data '{"jsonrpc":"2.0","method":"eth_getTransactionReceipt","params":["0x69e995d938b7b906a3145948802eb8e8f6891cdbb592f4b78de551da6f276cf6"], "id":1}' -H 'Content-Type: application/json' http://localhost:22021
 ```
 
 Take note of contract address.
@@ -135,18 +147,32 @@ total nodes `n` to ensure correct operation of the network is at least
 `3f+1`.
 
 Previous algorithms have been proposed. The advantage of QBFT is to have
-a low communication latency of three with normal case and view change
-communication complexity of `O(n^2)` . This is most relevant in
-situation where the execution and communication delay is not easy to
-predict.
+a low communication latency of `3` because the `3` states transfer from
+pre-prepare to prepare to commit. The communication complexity is
+`O(n^2)` because `n` node broadcasts to the other nodes about size of
+`n`. This is most relevant in situation where the execution and
+communication delay is not easy to predict.
 
-A quorum is the number of `floor((n+f)/2)+1`.
+A quorum is the number of `floor((n+f)/2)+1` in the paper
+<https://arxiv.org/pdf/2002.03613v2.pdf>, but depends on situation in
+the code whether to be `2f+1` or `2/3f`.
+
+The concensus starts with `startQBFT()` in `backend.go`, then to
+`core.Start()`, `startNewRound()`.
+
+A node is calculated to be a \"commander\" (leader or proposer) by
+`CalcProposer()`. Then send broadcast pre-prepare to let other nodes
+start to work in normal operation. A node knows if it is the
+\"commander\" by pattern matching with `event.Data.(type)`.
 
 Normal operation is like a state machine. Without failure of scale
-larger than `f+1`, the state of node changes from setup to pre-prepare
-to prepare and then commit and to final state. It starts with a leader
-to propose value to broadcast to other nodes to start other nodes in
-state machine manner.
+larger than `f+1`, the state of node changes from `StateAcceptRequest`,
+`StatePreprepared` to `StatePrepared` and finally `StateCommitted`.
+Every state ends in broadcast (gossip) messages to other nodes. The
+message include a number code and rlp encoded payload. Payload are very
+similar structured with CommonPayload and auxlilary information of state
+such as `digest` for prepare and `seal` for commit. The messages are
+handled by a handler with pattern matching the number code.
 
 Because the communication delay may be infinite if a node is down or
 erroneous outputs from nodes, the algorithms uses round change to keep

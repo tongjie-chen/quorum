@@ -7,6 +7,9 @@ The client program is in repo [[https://github.com/tongjie-chen/quorum-client][G
 ** Set up nodes
 In the working directory,
 #+begin_src sh
+  cd ~/tmp/
+  mkdir qbft-test3
+  cd qbft-test3
   mkdir -p ./QBFT-Network/{Node-0,Node-1}/data/keystore
   tree
   cd QBFT-Network
@@ -17,14 +20,33 @@ In the working directory,
   sed -i 's/<HOST>/127.0.0.1/g' static-nodes.json
 #+end_src
 
+#+RESULTS:
+| .         |               |          |                               |
+| └──       | QBFT-Network  |          |                               |
+| ├──       | Node-0        |          |                               |
+| │         | └──           | data     |                               |
+| │         | └──           | keystore |                               |
+| └──       | Node-1        |          |                               |
+| └──       | data          |          |                               |
+| └──       | keystore      |          |                               |
+|           |               |          |                               |
+| 7         | directories,  | 0        | files                         |
+| Creating  | bootnodes...  |          |                               |
+| Creating  | members...    |          |                               |
+| Creating  | validators... |          |                               |
+| Artifacts | in            | folder:  | artifacts/2022-05-11-00-02-13 |
+
 Now manually change the ports in the ~static-nodes.json~ and then run the following script.
-#+begin_src sh 
+#+begin_src sh
+  cd ~/tmp/qbft-test3/QBFT-Network/artifacts/goQuorum
   for i in `seq 0 1`; do cp static-nodes.json genesis.json ../../Node-$i/data/; done
   cd ..
   for i in `seq 0 1`; do cd ./validator$i; cp nodekey* address ../../Node-$i/data; cp account* ../../Node-$i/data/keystore; cd ..; done
   cd ..
-  for i in `seq 0 1`; do cd Node-$i; geth --datadir data init data/genesis.json; cd ..; done  
+  for i in `seq 0 1`; do cd Node-$i; geth --datadir data init data/genesis.json; cd ..; done
 #+end_src
+
+#+RESULTS:
 
 After that, can run the nodes like the following,
 #+begin_src sh
@@ -36,15 +58,15 @@ geth --datadir data \
     --networkid 1337 --nodiscover --verbosity 5 \
     --syncmode full --nousb \
     --istanbul.blockperiod 5 --mine --miner.threads 1 --miner.gasprice 0 --emitcheckpoints \
-    --http --http.addr 127.0.0.1 --http.port 22011 --http.corsdomain "*" --http.vhosts "*" \
-    --ws --ws.addr 127.0.0.1 --ws.port 32011 --ws.origins "*" \
+    --http --http.addr 127.0.0.1 --http.port 22021 --http.corsdomain "*" --http.vhosts "*" \
+    --ws --ws.addr 127.0.0.1 --ws.port 32021 --ws.origins "*" \
     --http.api admin,trace,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,istanbul,qbft \
     --ws.api admin,trace,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,istanbul,qbft \
     --unlock ${ADDRESS} --allow-insecure-unlock --password ./data/keystore/accountPassword \
-    --port 30311
+    --port 30321
 #+end_src
 
-#+begin_src sh 
+#+begin_src sh
 cd Node-1
 export ADDRESS=$(grep -o '"address": *"[^"]*"' ./data/keystore/accountKeystore | grep -o '"[^"]*"$' | sed 's/"//g')
 export PRIVATE_CONFIG=ignore
@@ -52,19 +74,26 @@ geth --datadir data \
     --networkid 1337 --nodiscover --verbosity 5 \
     --syncmode full --nousb \
     --istanbul.blockperiod 5 --mine --miner.threads 1 --miner.gasprice 0 --emitcheckpoints \
-    --http --http.addr 127.0.0.1 --http.port 22012 --http.corsdomain "*" --http.vhosts "*" \
-    --ws --ws.addr 127.0.0.1 --ws.port 32012 --ws.origins "*" \
+    --http --http.addr 127.0.0.1 --http.port 22022 --http.corsdomain "*" --http.vhosts "*" \
+    --ws --ws.addr 127.0.0.1 --ws.port 32022 --ws.origins "*" \
     --http.api admin,trace,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,istanbul,qbft \
     --ws.api admin,trace,db,eth,debug,miner,net,shh,txpool,personal,web3,quorum,istanbul,qbft \
     --unlock ${ADDRESS} --allow-insecure-unlock --password ./data/keystore/accountPassword \
-    --port 30312
+    --port 30322
 #+end_src
 
 Take notes of the http port number and account in ~Node-0/data/keystore/accountAddress~ or the one in Node-1.
+#+begin_src sh
+cat ~/tmp/qbft-test3/QBFT-Network/Node-0/data/keystore/accountAddress
+#+end_src
+
+#+RESULTS:
+: 0x824ea808df43a92c2ab01c6bb6c2ca444b1b64f4
+
 ** Deploy contract
 Deploy the contract ([[https://github.com/kaleido-io/kaleido-js/blob/master/deploy-transact/contracts/simplestorage.sol][kaleido-js/simplestorage.sol at master · kaleido-io/kaleido-js · GitHub]]) first by following the guide in [[https://consensys.net/docs/goquorum/en/latest/tutorials/contracts/deploying-contracts/][Deploy a contract - GoQuorum]] with solidity compiler.
 
-#+begin_src sh 
+#+begin_src sh
 wget https://raw.githubusercontent.com/kaleido-io/kaleido-js/master/deploy-transact/contracts/simplestorage.sol -O /tmp/simplestorage.sol
 #+end_src
 
@@ -75,9 +104,19 @@ solc -o /tmp --abi --bin /tmp/simplestorage.sol
 #+end_src
 
 Or just directly change the "from" account address and the http port in the end of next command to deploy and get the contract address.
-#+begin_src sh 
-curl -X POST --data '{"jsonrpc":"2.0","method":"eth_sendTransaction","params":[{"from":"0xf0e2db6c8dc6c681bb5d6ad121a107f300e9b2b5", "to":null, "gas":"0x24A22","gasPrice":"0x0", "data":"0x608060405234801561001057600080fd5b5060405161014d38038061014d8339818101604052602081101561003357600080fd5b8101908080519060200190929190505050806000819055505060f38061005a6000396000f3fe6080604052348015600f57600080fd5b5060043610603c5760003560e01c80632a1afcd914604157806360fe47b114605d5780636d4ce63c146088575b600080fd5b604760a4565b6040518082815260200191505060405180910390f35b608660048036036020811015607157600080fd5b810190808035906020019092919050505060aa565b005b608e60b4565b6040518082815260200191505060405180910390f35b60005481565b8060008190555050565b6000805490509056fea2646970667358221220e6966e446bd0af8e6af40eb0d8f323dd02f771ba1f11ae05c65d1624ffb3c58264736f6c63430007060033"}], "id":1}' -H 'Content-Type: application/json' http://localhost:20000
+#+begin_src sh
+curl -X POST --data '{"jsonrpc":"2.0","method":"eth_sendTransaction","params":[{"from":"0x824ea808df43a92c2ab01c6bb6c2ca444b1b64f4", "to":null, "gas":"0x24A22","gasPrice":"0x0", "data":"0x608060405234801561001057600080fd5b5060405161014d38038061014d8339818101604052602081101561003357600080fd5b8101908080519060200190929190505050806000819055505060f38061005a6000396000f3fe6080604052348015600f57600080fd5b5060043610603c5760003560e01c80632a1afcd914604157806360fe47b114605d5780636d4ce63c146088575b600080fd5b604760a4565b6040518082815260200191505060405180910390f35b608660048036036020811015607157600080fd5b810190808035906020019092919050505060aa565b005b608e60b4565b6040518082815260200191505060405180910390f35b60005481565b8060008190555050565b6000805490509056fea2646970667358221220e6966e446bd0af8e6af40eb0d8f323dd02f771ba1f11ae05c65d1624ffb3c58264736f6c63430007060033"}], "id":1}' -H 'Content-Type: application/json' http://localhost:22021
 #+end_src
+
+#+RESULTS:
+| jsonrpc":"2.0 | id:1 | 0x69e995d938b7b906a3145948802eb8e8f6891cdbb592f4b78de551da6f276cf6 |
+
+#+begin_src sh
+curl -X POST --data '{"jsonrpc":"2.0","method":"eth_getTransactionReceipt","params":["0x69e995d938b7b906a3145948802eb8e8f6891cdbb592f4b78de551da6f276cf6"], "id":1}' -H 'Content-Type: application/json' http://localhost:22021
+#+end_src
+
+#+RESULTS:
+| jsonrpc":"2.0 | id:1 | blockHash":"0xc4f825cb9a9b1f8f2e8aa9ab53c732a5f0e11d39b37d64f0180b256cdfda5d02 | 0x1a | 0x02b14f2027413e54f5e96177def142c7198822e1 | 0x1236e | 0x824ea808df43a92c2ab01c6bb6c2ca444b1b64f4 | 0x1236e | isPrivacyMarkerTransaction:false | logs:[] | 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 | 0x0 | to:null | 0x69e995d938b7b906a3145948802eb8e8f6891cdbb592f4b78de551da6f276cf6 | 0x0 | 0x0 |
 
 Take note of contract address.
 ** Run the client
@@ -99,7 +138,7 @@ The concensus starts with ~startQBFT()~ in ~backend.go~, then to ~core.Start()~,
 
 A node is calculated to be a "commander" (leader or proposer) by ~CalcProposer()~. Then send broadcast pre-prepare to let other nodes start to work in normal operation. A node knows if it is the "commander" by pattern matching with ~event.Data.(type)~.
 
-Normal operation is like a state machine. Without failure of scale larger than ~f+1~, the state of node changes from setup (request.go) to pre-prepare to prepare and then commit and to final state. Every state ends in broadcast (gossip) messages to other nodes. The message include a number code and rlp encoded payload. Payload are very similar structured with CommonPayload and auxlilary information of state such as ~digest~ for prepare and ~seal~ for commit. The messages are handled by a handler with pattern matching the number code.
+Normal operation is like a state machine. Without failure of scale larger than ~f+1~, the state of node changes from ~StateAcceptRequest~, ~StatePreprepared~ to ~StatePrepared~ and finally ~StateCommitted~. Every state ends in broadcast (gossip) messages to other nodes. The message include a number code and rlp encoded payload. Payload are very similar structured with CommonPayload and auxlilary information of state such as ~digest~ for prepare and ~seal~ for commit. The messages are handled by a handler with pattern matching the number code.
 
 Because the communication delay may be infinite if a node is down or erroneous outputs from nodes, the algorithms uses round change to keep liveness. When a time limit is reached for the normal operation as counted by a node, it will broadcast to change round. When receiving a quorum of valid messages and round change is justified, the node will change round and start the normal operation.
 
